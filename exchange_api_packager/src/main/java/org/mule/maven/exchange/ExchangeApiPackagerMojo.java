@@ -191,6 +191,6 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
     }
 
     protected String getFullFileName() {
-        return project.getBuild().getFinalName() + "-" + getClassifier() + "-full" + "." + getType();
+        return project.getBuild().getFinalName() + "-" + "fat-" + getClassifier() + "." + getType();
     }
 }
