@@ -1,0 +1,195 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://example.com/root.json",
+  "type": "object",
+  "title": "The Root Schema",
+  "required": [
+    "main",
+    "name",
+    "classifier",
+    "tags",
+    "groupId",
+    "backwardsCompatible",
+    "assetId",
+    "version",
+    "apiVersion",
+    "dependencies",
+    "metadata"
+  ],
+  "properties": {
+    "main": {
+      "$id": "#/properties/main",
+      "type": "string",
+      "title": "The Main Schema",
+      "default": "",
+      "examples": [
+        "greeting.raml"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "name": {
+      "$id": "#/properties/name",
+      "type": "string",
+      "title": "The Name Schema",
+      "default": "",
+      "examples": [
+        "greeting"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "classifier": {
+      "$id": "#/properties/classifier",
+      "type": "string",
+      "title": "The Classifier Schema",
+      "default": "",
+      "examples": [
+        "raml"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "tags": {
+      "$id": "#/properties/tags",
+      "type": "array",
+      "title": "The Tags Schema"
+    },
+    "groupId": {
+      "$id": "#/properties/groupId",
+      "type": "string",
+      "title": "The Groupid Schema",
+      "default": "",
+      "examples": [
+        "2f45ba3e-06fc-4bb5-91f8-2e0a3a6f540f"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "backwardsCompatible": {
+      "$id": "#/properties/backwardsCompatible",
+      "type": "boolean",
+      "title": "The Backwardscompatible Schema",
+      "default": false,
+      "examples": [
+        false
+      ]
+    },
+    "assetId": {
+      "$id": "#/properties/assetId",
+      "type": "string",
+      "title": "The Assetid Schema",
+      "default": "",
+      "examples": [
+        "greeting"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "version": {
+      "$id": "#/properties/version",
+      "type": "string",
+      "title": "The Version Schema",
+      "default": "",
+      "examples": [
+        "1.0.4"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "apiVersion": {
+      "$id": "#/properties/apiVersion",
+      "type": "string",
+      "title": "The Apiversion Schema",
+      "default": "",
+      "examples": [
+        "1.0"
+      ],
+      "pattern": "^(.*)$"
+    },
+    "dependencies": {
+      "$id": "#/properties/dependencies",
+      "type": "array",
+      "title": "The Dependencies Schema",
+      "items": {
+        "$id": "#/properties/dependencies/items",
+        "type": "object",
+        "title": "The Items Schema",
+        "required": [
+          "groupId",
+          "assetId",
+          "version"
+        ],
+        "properties": {
+          "groupId": {
+            "$id": "#/properties/dependencies/items/properties/groupId",
+            "type": "string",
+            "title": "The Groupid Schema",
+            "default": "",
+            "examples": [
+              "2f45ba3e-06fc-4bb5-91f8-2e0a3a6f540f"
+            ],
+            "pattern": "^(.*)$"
+          },
+          "assetId": {
+            "$id": "#/properties/dependencies/items/properties/assetId",
+            "type": "string",
+            "title": "The Assetid Schema",
+            "default": "",
+            "examples": [
+              "quoteofthedayf"
+            ],
+            "pattern": "^(.*)$"
+          },
+          "version": {
+            "$id": "#/properties/dependencies/items/properties/version",
+            "type": "string",
+            "title": "The Version Schema",
+            "default": "",
+            "examples": [
+              "2.4.2"
+            ],
+            "pattern": "^(.*)$"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "$id": "#/properties/metadata",
+      "type": "object",
+      "title": "The Metadata Schema",
+      "required": [
+        "projectId",
+        "branchId",
+        "commitId"
+      ],
+      "properties": {
+        "projectId": {
+          "$id": "#/properties/metadata/properties/projectId",
+          "type": "string",
+          "title": "The Projectid Schema",
+          "default": "",
+          "examples": [
+            "5da0b2a2-8dbe-408f-bede-f6428e2c4195"
+          ],
+          "pattern": "^(.*)$"
+        },
+        "branchId": {
+          "$id": "#/properties/metadata/properties/branchId",
+          "type": "string",
+          "title": "The Branchid Schema",
+          "default": "",
+          "examples": [
+            "master"
+          ],
+          "pattern": "^(.*)$"
+        },
+        "commitId": {
+          "$id": "#/properties/metadata/properties/commitId",
+          "type": "string",
+          "title": "The Commitid Schema",
+          "default": "",
+          "examples": [
+            "db6c249f71d55141da1c4cd0bc9d225bcff16a43"
+          ],
+          "pattern": "^(.*)$"
+        }
+      }
+    }
+  }
+}
