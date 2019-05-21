@@ -14,6 +14,7 @@ import org.apache.maven.model.io.ModelReader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.mule.maven.exchange.model.ExchangeDependency;
 import org.mule.maven.exchange.model.ExchangeModel;
@@ -79,10 +80,22 @@ public class ExchangeModelProcessor implements ModelProcessor {
     private Model toMavenModel(ExchangeModel model) {
         final Model result = new Model();
         result.setModelVersion("4.0.0");
-        result.setArtifactId(model.getAssetId());
-        result.setGroupId(model.getGroupId());
+        String assetId = model.getAssetId();
+        if (StringUtils.isBlank(assetId)) {
+            assetId = model.getName();
+        }
+        result.setArtifactId(assetId);
+        String groupId = model.getGroupId();
+        if (StringUtils.isBlank(groupId)) {
+            groupId = "org.mule";
+        }
+        result.setGroupId(groupId);
         result.setName(model.getName());
-        result.setVersion(model.getVersion());
+        String version = model.getVersion();
+        if (StringUtils.isBlank(version)) {
+            version = "0.0.1-SNAPSHOT";
+        }
+        result.setVersion(version);
         result.setRepositories(singletonList(createExchangeRepository()));
         final List<Dependency> dependencies = model.getDependencies().stream().map(this::toMavenDependency).collect(Collectors.toList());
         result.setDependencies(dependencies);

@@ -1,6 +1,7 @@
 
 package org.mule.maven.exchange.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +113,7 @@ public class ExchangeModel {
      * (Required)
      */
     @JsonProperty("dependencies")
-    private List<ExchangeDependency> dependencies = null;
+    private List<ExchangeDependency> dependencies = new ArrayList<>();
     /**
      * The ExchangeMetadata Schema
      * <p>

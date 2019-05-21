@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.mule</groupId>
+    <artifactId>borrameAPI</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>borrameAPI</name>
+    <repositories>
+        <repository>
+            <id>anypoint-exchange-v2</id>
+            <name>Anypoint Exchange</name>
+            <url>https://maven.anypoint.mulesoft.com/api/v2/maven</url>
+        </repository>
+    </repositories>
+    <build>
+        <sourceDirectory>${project.basedir}</sourceDirectory>
+        <directory>${project.basedir}/.exchange_modules_tmp/target</directory>
+        <plugins>
+            <plugin>
+                <groupId>org.mule.maven.exchange</groupId>
+                <artifactId>exchange_api_packager</artifactId>
+                <version>1.0-SNAPSHOT</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exchange-api</goal>
+                            <goal>rest-connect</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <classifier>raml</classifier>
+                    <mainFile>borrameapi.raml</mainFile>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
