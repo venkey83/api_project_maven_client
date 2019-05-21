@@ -9,6 +9,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
+import org.mule.maven.exchange.utils.NamingUtils;
 
 import java.io.*;
 import java.util.zip.ZipEntry;
@@ -17,8 +18,8 @@ import java.util.zip.ZipOutputStream;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
-@Mojo(name = "package", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-@Execute(goal = "package")
+@Mojo(name = "exchange-api", requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Execute(goal = "exchange-api")
 public class ExchangeApiPackagerMojo extends AbstractMojo {
 
     public static final String EXCHANGE_MODULES = "exchange_modules";
@@ -92,7 +93,8 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
         //Unzip the ramls
 
 
-        final File fullApiZip = new File(buildDirectory, getFullFileName());
+        final String fullFileName = NamingUtils.getFullFileName(project, getClassifier(), getType());
+        final File fullApiZip = new File(buildDirectory, fullFileName);
         final File workdir = new File(buildDirectory, WORKDIR);
         unzipDependenciesAndCopyTo(new File(buildDirectory, dependenciesDir), new File(workdir, EXCHANGE_MODULES));
         createZip(sourceDirectory, filter, workdir, TrueFileFilter.INSTANCE, fullApiZip);
@@ -188,9 +190,5 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
 
     protected String getFileName() {
         return project.getBuild().getFinalName() + "-" + getClassifier() + "." + getType();
-    }
-
-    protected String getFullFileName() {
-        return project.getBuild().getFinalName() + "-" + "fat-" + getClassifier() + "." + getType();
     }
 }

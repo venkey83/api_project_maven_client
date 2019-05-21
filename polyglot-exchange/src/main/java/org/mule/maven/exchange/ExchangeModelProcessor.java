@@ -1,10 +1,13 @@
 package org.mule.maven.exchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.maven.model.*;
-import org.apache.maven.model.building.FileModelSource;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
+import org.apache.maven.model.Repository;
 import org.apache.maven.model.building.ModelProcessor;
-import org.apache.maven.model.building.ModelSource;
 import org.apache.maven.model.building.ModelSource2;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.ModelReader;
@@ -15,9 +18,14 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.mule.maven.exchange.model.ExchangeDependency;
 import org.mule.maven.exchange.model.ExchangeModel;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -81,24 +89,28 @@ public class ExchangeModelProcessor implements ModelProcessor {
         final Build build = new Build();
         build.setDirectory("${project.basedir}/.exchange_modules_tmp/target");
         build.setSourceDirectory("${project.basedir}");
-        build.addPlugin(createPackagerPlugin(model.getClassifier()));
+        build.addPlugin(createPackagerPlugin(model));
         result.setBuild(build);
         return result;
     }
 
-    private Plugin createPackagerPlugin(String classifier) {
+    private Plugin createPackagerPlugin(ExchangeModel model) {
         Plugin result = new Plugin();
         result.setGroupId("org.mule.maven.exchange");
         result.setArtifactId("exchange_api_packager");
         result.setVersion(PACKAGER_VERSION);
         final Xpp3Dom configuration = new Xpp3Dom("configuration");
         final Xpp3Dom classifierNode = new Xpp3Dom("classifier");
-        classifierNode.setValue(classifier);
+        classifierNode.setValue(model.getClassifier());
         configuration.addChild(classifierNode);
+        final Xpp3Dom mainFileNode = new Xpp3Dom("mainFile");
+        mainFileNode.setValue(model.getMain());
+        configuration.addChild(mainFileNode);
         result.setConfiguration(configuration);
         PluginExecution pluginExecution = new PluginExecution();
         pluginExecution.setPhase("package");
-        pluginExecution.addGoal("package");
+        pluginExecution.addGoal("exchange-api");
+        pluginExecution.addGoal("rest-connect");
         result.addExecution(pluginExecution);
         return result;
     }
