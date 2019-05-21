@@ -1,8 +1,6 @@
 package org.mule.maven.exchange;
 
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Execute;
@@ -12,7 +10,10 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.eclipse.sisu.Parameters;
+import org.mule.connectivity.restconnect.api.ConnectorType;
+import org.mule.connectivity.restconnect.api.Parser;
+import org.mule.connectivity.restconnect.api.RestConnect;
+import org.mule.connectivity.restconnect.api.SpecFormat;
 import org.mule.maven.exchange.utils.NamingUtils;
 import org.mule.maven.exchange.utils.ZipUtils;
 
@@ -24,16 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.twdata.maven.mojoexecutor.MojoExecutor.artifactId;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.configuration;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.element;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.executeMojo;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.goal;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.groupId;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.name;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.plugin;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.version;
 
 @Mojo(name = "rest-connect", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 @Execute(goal = "rest-connect")
@@ -56,12 +47,6 @@ public class RestConnectPackageMojo extends AbstractMojo {
      */
     @Component
     private MavenProject project;
-
-    @Component
-    private MavenSession mavenSession;
-
-    @Component
-    private BuildPluginManager pluginManager;
 
     @Component
     protected MavenProjectHelper helper;
@@ -114,24 +99,20 @@ public class RestConnectPackageMojo extends AbstractMojo {
 
         //execute rest-connect
         final File restConnectOutputDir = new File(restConnectWorkDir, "target");
-        executeMojo(
-                plugin(
-                        groupId("org.mule.connectivity"),
-                        artifactId("rest-connect"),
-                        version("1.10.1")
-                ),
-                goal("raml2smartconnector"),
-                configuration(
-                        element(name("raml"), apiMainFile.getAbsolutePath()),
-                        element(name("specFormat"), calculateRestConnectFormat()),
-                        element(name("outputDir"), restConnectOutputDir.getAbsolutePath())
-                ),
-                executionEnvironment(
-                        project,
-                        mavenSession,
-                        pluginManager
-                )
-        );
+        try {
+            RestConnect.getInstance()
+                    .createConnectorFromSpec(apiMainFile, SpecFormat.getFromString(calculateRestConnectFormat()), Parser.AMF, ConnectorType.SmartConnector)
+                    .withGroupId(project.getGroupId())
+                    .withArtifactId("mule-plugin-" + project.getArtifactId())
+                    .withVersion(project.getVersion())
+                    .withprojectDescription(getDescription(project))
+                    .withOutputDir(restConnectOutputDir.toPath())
+                    .run();
+        } catch (Exception e) {
+            final String messageError = String.format("Cant generate connector for [%s], rest-connect failed with [%s]", mainFile, e.getMessage());
+            getLog().error(messageError);
+            throw new MojoExecutionException(messageError, e);
+        }
 
         //attach the generated mule-plugin from rest-connect
         final File mulePlugin = searchMulePlugin(restConnectOutputDir);
@@ -142,6 +123,10 @@ public class RestConnectPackageMojo extends AbstractMojo {
             throw new MojoExecutionException(String.format("Couldn't find any generated connector to attach under [%s] (didn't find [%s])",
                     restConnectOutputDir.getAbsolutePath(), compressedFatApi.getAbsolutePath()));
         }
+    }
+
+    private String getDescription(MavenProject project) {
+        return String.format("Generated with REST-Connect from version %s:%s:%s.", project.getGroupId(), project.getArtifactId(), project.getVersion());
     }
 
     /**
