@@ -103,7 +103,7 @@ public class RestConnectPackageMojo extends AbstractMojo {
             RestConnect.getInstance()
                     .createConnectorFromSpec(apiMainFile, SpecFormat.getFromString(calculateRestConnectFormat()), Parser.AMF, ConnectorType.SmartConnector)
                     .withGroupId(project.getGroupId())
-                    .withArtifactId("mule-plugin-" + project.getArtifactId())
+                    .withArtifactId(project.getArtifactId())
                     .withVersion(project.getVersion())
                     .withprojectDescription(getDescription(project))
                     .withOutputDir(restConnectOutputDir.toPath())
