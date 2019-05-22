@@ -66,7 +66,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
                 pomFile.createNewFile();
                 pomFile.deleteOnExit();
             } catch (IOException e) {
-                throw new RuntimeException("error creating empty file", e);
+                throw new RuntimeException(String.format("error creating temporal `%s` empty file", TEMPORAL_EXCHANGE_XML), e);
             }
         }else {
             // behave like proper maven in case there is no pom from manager
@@ -87,10 +87,8 @@ public class ExchangeModelProcessor implements ModelProcessor {
 
     @Override
     public Model read(Reader reader, Map<String, ?> options) throws IOException, ModelParseException {
-
         Object source = (options != null) ? options.get(SOURCE) : null;
         if (source instanceof ModelSource2 && ((ModelSource2) source).getLocation().endsWith(TEMPORAL_EXCHANGE_XML)) {
-
             // lookup the temporal file ".exchange.xml"
             final String temporalExchangeXml = ((ModelSource2) source).getLocation();
             final File temporaryExchangeXml = new File(temporalExchangeXml);
@@ -105,11 +103,9 @@ public class ExchangeModelProcessor implements ModelProcessor {
             final FileModelSource temporalSourceXml = new FileModelSource(exchangeJson);
             ((Map) options).put(ModelProcessor.SOURCE, temporalSourceXml);
 
-            // serialize the Maven model as XML in the ".exchange.xml" temporal file
-            MavenXpp3Writer xmlWriter = new MavenXpp3Writer();
-            StringWriter xml = new StringWriter();
-            xmlWriter.write(xml, mavenModel);
-            FileUtils.fileWrite(temporaryExchangeXml, xml.toString());
+            // serialize the Maven model as XML in the temporal ".exchange.xml" file for proper installation of the .pom
+            final String data = toXmlString(mavenModel);
+            FileUtils.fileWrite(temporaryExchangeXml, data);
             mavenModel.setPomFile(temporaryExchangeXml);
 
             // done =]

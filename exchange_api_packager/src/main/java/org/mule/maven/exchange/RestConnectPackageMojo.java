@@ -14,11 +14,8 @@ import org.mule.connectivity.restconnect.api.ConnectorType;
 import org.mule.connectivity.restconnect.api.Parser;
 import org.mule.connectivity.restconnect.api.RestConnect;
 import org.mule.connectivity.restconnect.api.SpecFormat;
-import org.mule.maven.exchange.utils.NamingUtils;
-import org.mule.maven.exchange.utils.ZipUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,10 +58,10 @@ public class RestConnectPackageMojo extends AbstractMojo {
     private String mainFile;
 
     /**
-     * reference to the ZIP fat file that's self contained, if not provided it will be guessed based on {@link NamingUtils#getFullFileName(org.apache.maven.project.MavenProject, java.lang.String, java.lang.String)}
+     * reference to the directory that's self contained, if not provided it will be guessed based on {@link ApiProjectConstants#getFullApiDirectory(java.io.File)}
      */
     @Parameter
-    private String fatApiFile;
+    private String fatApiDirectory;
 
     /**
      * property to skip the complete connector generation
@@ -86,18 +83,22 @@ public class RestConnectPackageMojo extends AbstractMojo {
         }
 
         //looks for zip fat API file
-        final String buildDirectory = project.getBuild().getDirectory();
-        final File compressedFatApi = calculateFatApiFile(buildDirectory);
-        if (!compressedFatApi.exists()) {
-            getLog().warn(String.format("Cant generate connector, full API [%s] doesn't exist", compressedFatApi.getAbsolutePath()));
+        final File buildDirectory = new File(project.getBuild().getDirectory());
+        File fullApiDirectory = calculateFatDirectory(buildDirectory);
+        if (!fullApiDirectory.exists()) {
+            getLog().warn(String.format("Cant generate connector, full API directory [%s] doesn't exist", fullApiDirectory.getAbsolutePath()));
+            return;
+        }
+        final File apiMainFile = new File(fullApiDirectory, mainFile);
+        if (!apiMainFile.exists()) {
+            getLog().warn(String.format("Cant generate connector, mainFile [%s] can't be found in the full API directory [%s]",
+                    mainFile,
+                    fullApiDirectory.getAbsolutePath()));
             return;
         }
 
-        //prepares unzipped folder to execute rest-connect
-        final File restConnectWorkDir = new File(buildDirectory, REST_CONNECT_WORKDIR);
-        final File apiMainFile = mainFileInExplodedFolder(compressedFatApi, restConnectWorkDir);
-
         //execute rest-connect
+        final File restConnectWorkDir = new File(buildDirectory, REST_CONNECT_WORKDIR);
         final File restConnectOutputDir = new File(restConnectWorkDir, "target");
         try {
             RestConnect.getInstance()
@@ -121,7 +122,8 @@ public class RestConnectPackageMojo extends AbstractMojo {
             helper.attachArtifact(project, "jar", "mule-plugin", mulePlugin);
         } else {
             throw new MojoExecutionException(String.format("Couldn't find any generated connector to attach under [%s] (didn't find [%s])",
-                    restConnectOutputDir.getAbsolutePath(), compressedFatApi.getAbsolutePath()));
+                    restConnectOutputDir.getAbsolutePath(),
+                    mulePlugin.getAbsolutePath()));
         }
     }
 
@@ -130,38 +132,18 @@ public class RestConnectPackageMojo extends AbstractMojo {
     }
 
     /**
-     * @return a file pointing to the compressed fat API, either by taking it from the parameterized {@link #fatApiFile},
+     * @return a file pointing to the directory of the fat API, either by taking it from the parameterized {@link #fatApiDirectory},
      * or by doing a guessing in the current build directory.
      */
-    private File calculateFatApiFile(String buildDirectory) {
+    private File calculateFatDirectory(File buildDirectory) {
         File result;
-        if (fatApiFile != null) {
-            result = new File(fatApiFile);
+        if (fatApiDirectory != null) {
+            result = new File(fatApiDirectory);
         } else {
-            final String fullFileName = NamingUtils.getFullFileName(project, getClassifier(), getType());
-            getLog().debug(String.format("Parameter 'fatApiFile' was null, guessing the fat API to [%s]", fullFileName));
-            result = new File(buildDirectory, fullFileName);
+            result = ApiProjectConstants.getFullApiDirectory(buildDirectory);
+            getLog().debug(String.format("Parameter 'fatApiDirectory' was null, guessing the fat API to [%s]", result.getAbsolutePath()));
         }
         return result;
-    }
-
-    /**
-     * @param compressedFatApi   compressed file to unzip
-     * @param restConnectWorkDir target folder to unzip the fat API
-     * @return a file pointing to the mainFile in the exploded working directory
-     * @throws MojoExecutionException if the mainFile is pointing to non-existing files
-     */
-    private File mainFileInExplodedFolder(File compressedFatApi, File restConnectWorkDir) throws MojoExecutionException {
-        try {
-            ZipUtils.unzip(compressedFatApi.getAbsolutePath(), restConnectWorkDir.getAbsolutePath());
-        } catch (IOException e) {
-            throw new MojoExecutionException(String.format("Cant unzip spec under [%s] to generate a connector", compressedFatApi.getAbsolutePath()), e);
-        }
-        final File apiMainFile = new File(restConnectWorkDir, mainFile);
-        if (!apiMainFile.exists()) {
-            throw new MojoExecutionException(String.format("The parameter 'mainFile' [%s] cannot be found in [%s]", mainFile, compressedFatApi.getAbsolutePath()));
-        }
-        return apiMainFile;
     }
 
     /**

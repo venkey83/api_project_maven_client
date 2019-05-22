@@ -9,7 +9,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.mule.maven.exchange.utils.NamingUtils;
 
 import java.io.*;
 import java.util.zip.ZipEntry;
@@ -52,12 +51,22 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
         helper.attachArtifact(project, getType(), getClassifier(), apiZip);
 
         //create full zip
-        final String fullFileName = NamingUtils.getFullFileName(project, getClassifier(), getType());
+        final String fullFileName = getFullFileName(project, getClassifier(), getType());
         final File fullApiZip = new File(buildDirectory, fullFileName);
         createZip(getFullApiDirectory(buildDirectory), TrueFileFilter.INSTANCE, fullApiZip);
         helper.attachArtifact(project, getType(), getClassifier() + "-full", fullApiZip);
     }
 
+    /**
+     * Provides the name of the ZIP file that has the self contained API (with all of its dependencies)
+     * @param project working project
+     * @param classifier artifact's classifier
+     * @param type artifact's type
+     * @return the name of the fat file for the ZIP file, such as "american-flights-api-1.0.3-raml-full.zip"
+     */
+    private String getFullFileName(MavenProject project, final String classifier, final String type) {
+        return project.getBuild().getFinalName() + "-" + "fat-" + classifier + "." + type;
+    }
 
     private void createZip(File sourceDir, FileFilter fileFilter, File zipFile) throws MojoExecutionException {
         try {
