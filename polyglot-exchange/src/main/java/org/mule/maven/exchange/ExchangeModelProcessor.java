@@ -1,6 +1,7 @@
 package org.mule.maven.exchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.tools.internal.ws.processor.model.ModelException;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -29,6 +30,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
@@ -58,7 +60,32 @@ public class ExchangeModelProcessor implements ModelProcessor {
 
         Object source = (options != null) ? options.get(SOURCE) : null;
         if (source instanceof ModelSource2 && ((ModelSource2) source).getLocation().endsWith(JSON_EXT)) {
+            final String location = ((ModelSource2) source).getLocation();
             final ExchangeModel model = objectMapper.readValue(reader, ExchangeModel.class);
+            boolean modified = false;
+            if (StringUtils.isBlank(model.getAssetId())) {
+                model.setAssetId(dasherize(model.getName()));
+                modified = true;
+            }
+            if (StringUtils.isBlank(model.getVersion())) {
+                model.setVersion("1.0.0-SNAPSHOT");
+                modified = true;
+            }
+            if (StringUtils.isBlank(model.getGroupId())) {
+                final String orgId = guessOrgId(location);
+                if (orgId != null) {
+                    model.setGroupId(orgId);
+                    modified = true;
+                } else {
+                    throw new ModelException("No `groupId` on exchange json or System property `groupId` or being an apivcs project");
+                }
+            }
+
+            if (modified) {
+                System.out.println("[WARNING] exchange.json was modified by the build.");
+                objectMapper.writeValue(new File(location), model);
+            }
+
             final Model mavenModel = toMavenModel(model);
             if (Boolean.getBoolean("exchange.maven.debug")) {
                 System.out.println("Maven Model \n" + toXmlString(mavenModel));
@@ -71,6 +98,25 @@ public class ExchangeModelProcessor implements ModelProcessor {
         }
     }
 
+    private String guessOrgId(String location) {
+        String groupId = System.getProperty("groupId");
+        if (groupId == null) {
+            final File projectFolder = new File(location).getParentFile();
+            final File apiVcsConfigFile = new File(new File(projectFolder, ".apivcs"), "config.properties");
+            if (apiVcsConfigFile.exists()) {
+                final Properties properties = new Properties();
+                try (final FileInputStream fileInputStream = new FileInputStream(apiVcsConfigFile)) {
+                    properties.load(fileInputStream);
+                } catch (IOException e) {
+
+                }
+                groupId = properties.getProperty("orgId");
+            }
+        }
+
+        return groupId;
+    }
+
     public String toXmlString(Model mavenModel) throws IOException {
         StringWriter stringWriter = new StringWriter();
         new MavenXpp3Writer().write(stringWriter, mavenModel);
@@ -80,22 +126,10 @@ public class ExchangeModelProcessor implements ModelProcessor {
     private Model toMavenModel(ExchangeModel model) {
         final Model result = new Model();
         result.setModelVersion("4.0.0");
-        String assetId = model.getAssetId();
-        if (StringUtils.isBlank(assetId)) {
-            assetId = model.getName();
-        }
-        result.setArtifactId(assetId);
-        String groupId = model.getGroupId();
-        if (StringUtils.isBlank(groupId)) {
-            groupId = "org.mule";
-        }
-        result.setGroupId(groupId);
+        result.setArtifactId(model.getAssetId());
+        result.setGroupId(model.getGroupId());
         result.setName(model.getName());
-        String version = model.getVersion();
-        if (StringUtils.isBlank(version)) {
-            version = "0.0.1-SNAPSHOT";
-        }
-        result.setVersion(version);
+        result.setVersion(model.getVersion());
         result.setRepositories(singletonList(createExchangeRepository()));
         final List<Dependency> dependencies = model.getDependencies().stream().map(this::toMavenDependency).collect(Collectors.toList());
         result.setDependencies(dependencies);
@@ -105,6 +139,10 @@ public class ExchangeModelProcessor implements ModelProcessor {
         build.addPlugin(createPackagerPlugin(model));
         result.setBuild(build);
         return result;
+    }
+
+    private String dasherize(String name) {
+        return name.toLowerCase().replaceAll(" ", "-");
     }
 
     private Plugin createPackagerPlugin(ExchangeModel model) {

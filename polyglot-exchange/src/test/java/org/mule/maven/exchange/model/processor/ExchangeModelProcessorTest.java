@@ -35,6 +35,7 @@ public class ExchangeModelProcessorTest {
 
     @Test
     public void generateModelCorrectly() throws IOException {
+        System.setProperty("groupId", "org.mule.test");
         final ExchangeModelProcessor exchangeModelProcessor = new ExchangeModelProcessor();
         final HashMap<String, Object> options = new HashMap<>();
         final File exchangeFile = getExchangeFile(testCase);
@@ -49,8 +50,6 @@ public class ExchangeModelProcessorTest {
                 .checkForSimilar()
                 .ignoreWhitespace()
                 .build();
-
-        System.out.println("result = " + result);
 
         assertFalse("XML similar " + myDiff.toString(), myDiff.hasDifferences());
     }
