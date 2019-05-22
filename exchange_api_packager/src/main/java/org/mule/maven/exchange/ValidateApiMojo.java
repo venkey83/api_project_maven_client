@@ -1,8 +1,6 @@
 package org.mule.maven.exchange;
 
 
-import amf.MessageStyle;
-import amf.MessageStyles;
 import amf.ProfileName;
 import amf.ProfileNames;
 import amf.client.AMF;
@@ -10,9 +8,10 @@ import amf.client.environment.DefaultEnvironment;
 import amf.client.environment.Environment;
 import amf.client.model.document.BaseUnit;
 import amf.client.parse.Oas20Parser;
+import amf.client.parse.Raml08Parser;
 import amf.client.parse.RamlParser;
 import amf.client.validate.ValidationReport;
-import amf.client.validate.ValidationResult;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -20,6 +19,9 @@ import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -59,31 +61,32 @@ public class ValidateApiMojo extends AbstractMojo {
                 /* Parsing Raml 10 with specified file returning future. */
                 final BaseUnit result;
                 final ProfileName profileName;
-                final MessageStyle messageStyle;
-                final String mainFile = new File(calculateFatDirectory(buildDirectory), this.mainFile).toURI().toString();
-
+                final File ramlFile = new File(calculateFatDirectory(buildDirectory), this.mainFile);
+                final String mainFileURL = ramlFile.toURI().toString();
 
                 if (classifier.equals("raml")) {
-                    result = new RamlParser(env).parseFileAsync(mainFile).get();
-                    profileName = ProfileNames.RAML();
-                    messageStyle = MessageStyles.RAML();
+                    final List<String> lines = Files.readAllLines(ramlFile.toPath(), Charset.forName("UTF-8"));
+                    final String firstLine = lines.stream().filter(l -> !StringUtils.isBlank(l)).findFirst().orElse("");
+                    if (firstLine.equalsIgnoreCase("#%RAML 0.8")) {
+                        result = new Raml08Parser(env).parseFileAsync(mainFileURL).get();
+                        profileName = ProfileNames.RAML08();
+                    } else {
+                        result = new RamlParser(env).parseFileAsync(mainFileURL).get();
+                        profileName = ProfileNames.RAML();
+                    }
                 } else {
-                    result = new Oas20Parser(env).parseFileAsync(mainFile).get();
+                    result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
                     profileName = ProfileNames.OAS();
-                    messageStyle = MessageStyles.OAS();
                 }
 
                 /* Run RAML default validations on parsed unit (expects no errors). */
-                final ValidationReport report = AMF.validate(result, profileName, messageStyle).get();
+                final ValidationReport report = AMF.validate(result, profileName, profileName.messageStyle()).get();
                 if (!report.conforms()) {
-                    final List<ValidationResult> results = report.results();
-                    for (ValidationResult validationResult : results) {
-                        getLog().error(validationResult.message());
-                    }
+                    getLog().error(report.toString());
                     throw new MojoFailureException("Build Fail");
                 }
 
-            } catch (InterruptedException | ExecutionException e) {
+            } catch (InterruptedException | ExecutionException | IOException e) {
                 throw new MojoExecutionException("Internal error while validating.", e);
             }
         }
