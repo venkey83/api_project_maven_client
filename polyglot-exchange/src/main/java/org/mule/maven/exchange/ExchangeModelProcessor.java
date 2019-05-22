@@ -1,7 +1,5 @@
 package org.mule.maven.exchange;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.tools.internal.ws.processor.model.ModelException;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -19,6 +17,7 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.mule.maven.exchange.model.ExchangeDependency;
 import org.mule.maven.exchange.model.ExchangeModel;
+import org.mule.maven.exchange.model.ExchangeModelSerializer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +30,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
@@ -38,11 +39,13 @@ import static java.util.Collections.singletonList;
 @Component(role = ModelProcessor.class)
 public class ExchangeModelProcessor implements ModelProcessor {
 
+    private static Logger LOGGER = Logger.getLogger(ExchangeModelProcessor.class.getName());
+
     private static final String JSON_EXT = ".json";
 
     public static final String PACKAGER_VERSION = "1.0-SNAPSHOT";
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ExchangeModelSerializer objectMapper = new ExchangeModelSerializer();
 
     @Requirement
     private ModelReader modelReader;
@@ -61,7 +64,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
         Object source = (options != null) ? options.get(SOURCE) : null;
         if (source instanceof ModelSource2 && ((ModelSource2) source).getLocation().endsWith(JSON_EXT)) {
             final String location = ((ModelSource2) source).getLocation();
-            final ExchangeModel model = objectMapper.readValue(reader, ExchangeModel.class);
+            final ExchangeModel model = objectMapper.read(reader);
             boolean modified = false;
             if (StringUtils.isBlank(model.getAssetId())) {
                 model.setAssetId(dasherize(model.getName()));
@@ -77,13 +80,13 @@ public class ExchangeModelProcessor implements ModelProcessor {
                     model.setGroupId(orgId);
                     modified = true;
                 } else {
-                    throw new ModelException("No `groupId` on exchange json or System property `groupId` or being an apivcs project");
+                    throw new RuntimeException("No `groupId` on exchange json or System property `groupId` or being an apivcs project");
                 }
             }
 
             if (modified) {
-                System.out.println("[WARNING] exchange.json was modified by the build.");
-                objectMapper.writeValue(new File(location), model);
+                LOGGER.log(Level.WARNING, "[WARNING] exchange.json was modified by the build.");
+                objectMapper.write(model, new File(location));
             }
 
             final Model mavenModel = toMavenModel(model);
@@ -158,37 +161,28 @@ public class ExchangeModelProcessor implements ModelProcessor {
         mainFileNode.setValue(model.getMain());
         configuration.addChild(mainFileNode);
         result.setConfiguration(configuration);
-        PluginExecution pluginExecution = new PluginExecution();
-        pluginExecution.setPhase("package");
-        pluginExecution.addGoal("exchange-api");
-        pluginExecution.addGoal("rest-connect");
-        result.addExecution(pluginExecution);
+
+        PluginExecution generateSources = new PluginExecution();
+        generateSources.setId("generate-full-api");
+        generateSources.setPhase("generate-sources");
+        generateSources.addGoal("generate-full-api");
+        result.addExecution(generateSources);
+
+        PluginExecution compilePhase = new PluginExecution();
+        compilePhase.setId("validate-api");
+        compilePhase.setPhase("compile");
+        compilePhase.addGoal("validate-api");
+        result.addExecution(compilePhase);
+
+
+        PluginExecution packagePhase = new PluginExecution();
+        packagePhase.setId("generate-artifacts");
+        packagePhase.setPhase("package");
+        packagePhase.addGoal("package-api");
+        packagePhase.addGoal("rest-connect");
+        result.addExecution(packagePhase);
         return result;
     }
-
-//
-//    <build>
-//        <plugins>
-//            <plugin>
-//                <groupId>com.salesforce.turtles</groupId>
-//                <artifactId>turtles-maven-plugin</artifactId>
-//                <version>0.1.1-PACKAGER_VERSION</version>
-//                <configuration>
-//                    <mainClass>com.force.weave.WeaveRunner</mainClass>
-//                    <turtlesVersion>0.1.1-PACKAGER_VERSION</turtlesVersion>
-//                    <disableLimits>true</disableLimits>
-//                </configuration>
-//
-//                <executions>
-//                    <execution>
-//                        <goals>
-//                            <goal>invoke</goal>
-//                        </goals>
-//                    </execution>
-//                </executions>
-//            </plugin>
-//        </plugins>
-//    </build>
 
     private Dependency toMavenDependency(ExchangeDependency dep) {
         Dependency result = new Dependency();

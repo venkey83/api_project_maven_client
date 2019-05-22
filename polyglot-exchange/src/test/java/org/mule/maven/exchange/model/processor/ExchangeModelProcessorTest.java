@@ -51,6 +51,10 @@ public class ExchangeModelProcessorTest {
                 .ignoreWhitespace()
                 .build();
 
+        if (myDiff.hasDifferences()) {
+            System.out.println(result);
+        }
+
         assertFalse("XML similar " + myDiff.toString(), myDiff.hasDifferences());
     }
 

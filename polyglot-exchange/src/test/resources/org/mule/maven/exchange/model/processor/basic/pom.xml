@@ -23,9 +23,24 @@
                 <version>1.0-SNAPSHOT</version>
                 <executions>
                     <execution>
+                        <id>generate-full-api</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate-full-api</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>validate-api</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>validate-api</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>generate-artifacts</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>exchange-api</goal>
+                            <goal>package-api</goal>
                             <goal>rest-connect</goal>
                         </goals>
                     </execution>
