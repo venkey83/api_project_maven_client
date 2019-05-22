@@ -6,13 +6,16 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Repository;
+import org.apache.maven.model.building.FileModelSource;
 import org.apache.maven.model.building.ModelProcessor;
 import org.apache.maven.model.building.ModelSource2;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.ModelReader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.model.locator.ModelLocator;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
+import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.mule.maven.exchange.model.ExchangeDependency;
@@ -41,7 +44,8 @@ public class ExchangeModelProcessor implements ModelProcessor {
 
     private static Logger LOGGER = Logger.getLogger(ExchangeModelProcessor.class.getName());
 
-    private static final String JSON_EXT = ".json";
+    private static final String EXCHANGE_JSON = "exchange.json";
+    private static final String TEMPORAL_EXCHANGE_XML = ".exchange.xml";
 
     public static final String PACKAGER_VERSION = "1.0-SNAPSHOT";
 
@@ -50,55 +54,105 @@ public class ExchangeModelProcessor implements ModelProcessor {
     @Requirement
     private ModelReader modelReader;
 
+    @Requirement
+    private ModelLocator modelLocator;
+
+    @Override
+    public File locatePom(File projectDirectory) {
+        File pomFile = new File(projectDirectory, EXCHANGE_JSON);
+        if (pomFile.exists()) {
+            pomFile = new File(pomFile.getParentFile(), TEMPORAL_EXCHANGE_XML);
+            try {
+                pomFile.createNewFile();
+                pomFile.deleteOnExit();
+            } catch (IOException e) {
+                throw new RuntimeException("error creating empty file", e);
+            }
+        }else {
+            // behave like proper maven in case there is no pom from manager
+            pomFile = modelLocator.locatePom(projectDirectory);
+        }
+        return pomFile;
+    }
+
+    @Override
     public Model read(File file, Map<String, ?> map) throws IOException, ModelParseException {
         return read(new FileInputStream(file), map);
     }
 
-
+    @Override
     public Model read(InputStream inputStream, Map<String, ?> map) throws IOException, ModelParseException {
         return read(new InputStreamReader(inputStream, StandardCharsets.UTF_8), map);
     }
 
+    @Override
     public Model read(Reader reader, Map<String, ?> options) throws IOException, ModelParseException {
 
         Object source = (options != null) ? options.get(SOURCE) : null;
-        if (source instanceof ModelSource2 && ((ModelSource2) source).getLocation().endsWith(JSON_EXT)) {
-            final String location = ((ModelSource2) source).getLocation();
-            final ExchangeModel model = objectMapper.read(reader);
-            boolean modified = false;
-            if (StringUtils.isBlank(model.getAssetId())) {
-                model.setAssetId(dasherize(model.getName()));
-                modified = true;
-            }
-            if (StringUtils.isBlank(model.getVersion())) {
-                model.setVersion("1.0.0-SNAPSHOT");
-                modified = true;
-            }
-            if (StringUtils.isBlank(model.getGroupId())) {
-                final String orgId = guessOrgId(location);
-                if (orgId != null) {
-                    model.setGroupId(orgId);
-                    modified = true;
-                } else {
-                    throw new RuntimeException("No `groupId` on exchange json or System property `groupId` or being an apivcs project");
-                }
-            }
+        if (source instanceof ModelSource2 && ((ModelSource2) source).getLocation().endsWith(TEMPORAL_EXCHANGE_XML)) {
 
-            if (modified) {
-                LOGGER.log(Level.WARNING, "[WARNING] exchange.json was modified by the build.");
-                objectMapper.write(model, new File(location));
-            }
+            // lookup the temporal file ".exchange.xml"
+            final String temporalExchangeXml = ((ModelSource2) source).getLocation();
+            final File temporaryExchangeXml = new File(temporalExchangeXml);
+            final File exchangeJson = new File(temporaryExchangeXml.getParent(), EXCHANGE_JSON);
 
-            final Model mavenModel = toMavenModel(model);
-            if (Boolean.getBoolean("exchange.maven.debug")) {
-                System.out.println("Maven Model \n" + toXmlString(mavenModel));
-            }
+            // retrieve the original "exchange.json" file and obtain the Maven model
+            final String exchangeJsonLocation = exchangeJson.getAbsolutePath();
+            final FileInputStream exchangeJsonInputStream = new FileInputStream(exchangeJson);
+            final Model mavenModel = getModel(exchangeJsonLocation, exchangeJsonInputStream);
+
+            // store the reference from the original source of truth, the "exchange.json" file
+            final FileModelSource temporalSourceXml = new FileModelSource(exchangeJson);
+            ((Map) options).put(ModelProcessor.SOURCE, temporalSourceXml);
+
+            // serialize the Maven model as XML in the ".exchange.xml" temporal file
+            MavenXpp3Writer xmlWriter = new MavenXpp3Writer();
+            StringWriter xml = new StringWriter();
+            xmlWriter.write(xml, mavenModel);
+            FileUtils.fileWrite(temporaryExchangeXml, xml.toString());
+            mavenModel.setPomFile(temporaryExchangeXml);
+
+            // done =]
             return mavenModel;
         } else {
             //It's a normal maven project with a pom.xml file
             //It's a normal maven project with a pom.xml file
             return modelReader.read(reader, options);
         }
+    }
+
+    private Model getModel(String location, InputStream inputStream) throws IOException {
+        final ExchangeModel model = objectMapper.read(inputStream);
+
+        boolean modified = false;
+        if (StringUtils.isBlank(model.getAssetId())) {
+            model.setAssetId(dasherize(model.getName()));
+            modified = true;
+        }
+        if (StringUtils.isBlank(model.getVersion())) {
+            model.setVersion("1.0.0-SNAPSHOT");
+            modified = true;
+        }
+        if (StringUtils.isBlank(model.getGroupId())) {
+            final String orgId = guessOrgId(location);
+            if (orgId != null) {
+                model.setGroupId(orgId);
+                modified = true;
+            } else {
+                throw new RuntimeException("No `groupId` on exchange json or System property `groupId` or being an apivcs project");
+            }
+        }
+
+        if (modified) {
+            LOGGER.log(Level.WARNING, "[WARNING] exchange.json was modified by the build.");
+            objectMapper.write(model, new File(location));
+        }
+
+        final Model mavenModel = toMavenModel(model);
+        if (Boolean.getBoolean("exchange.maven.debug")) {
+            System.out.println("Maven Model \n" + toXmlString(mavenModel));
+        }
+        return mavenModel;
     }
 
     private String guessOrgId(String location) {
@@ -209,7 +263,4 @@ public class ExchangeModelProcessor implements ModelProcessor {
         return repository;
     }
 
-    public File locatePom(File projectDirectory) {
-        return new File(projectDirectory, "exchange.json");
-    }
 }
