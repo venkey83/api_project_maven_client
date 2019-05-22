@@ -39,6 +39,13 @@ public class ValidateApiMojo extends AbstractMojo {
     @Parameter()
     private String mainFile;
 
+    /**
+     * reference to the directory that's self contained, if not provided it will be guessed based on {@link ApiProjectConstants#getFullApiDirectory(java.io.File)}
+     */
+    @Parameter
+    private String fatApiDirectory;
+
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         final File buildDirectory = new File(project.getBuild().getDirectory());
@@ -53,7 +60,7 @@ public class ValidateApiMojo extends AbstractMojo {
                 final BaseUnit result;
                 final ProfileName profileName;
                 final MessageStyle messageStyle;
-                final String mainFile = new File(ApiProjectConstants.getFullApiDirectory(buildDirectory), this.mainFile).toURI().toString();
+                final String mainFile = new File(calculateFatDirectory(buildDirectory), this.mainFile).toURI().toString();
 
 
                 if (classifier.equals("raml")) {
@@ -80,5 +87,20 @@ public class ValidateApiMojo extends AbstractMojo {
                 throw new MojoExecutionException("Internal error while validating.", e);
             }
         }
+    }
+
+    /**
+     * @return a file pointing to the directory of the fat API, either by taking it from the parameterized {@link #fatApiDirectory},
+     * or by doing a guessing in the current build directory.
+     */
+    private File calculateFatDirectory(File buildDirectory) {
+        File result;
+        if (fatApiDirectory != null) {
+            result = new File(fatApiDirectory);
+        } else {
+            result = ApiProjectConstants.getFullApiDirectory(buildDirectory);
+            getLog().debug(String.format("Parameter 'fatApiDirectory' was null, guessing the fat API to [%s]", result.getAbsolutePath()));
+        }
+        return result;
     }
 }
