@@ -39,7 +39,7 @@ public class ExchangeModelProcessorTest {
         final ExchangeModelProcessor exchangeModelProcessor = new ExchangeModelProcessor();
         final HashMap<String, Object> options = new HashMap<>();
         final File exchangeFile = getExchangeFile(testCase);
-        final FileModelSource fileModelSource = new FileModelSource(exchangeFile);
+        final FileModelSource fileModelSource = new FileModelSource(exchangeModelProcessor.locatePom(testCase));
         options.put(ModelProcessor.SOURCE, fileModelSource);
         final FileInputStream inputStream = new FileInputStream(exchangeFile);
         final Model read = exchangeModelProcessor.read(inputStream, options);
