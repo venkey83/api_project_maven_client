@@ -98,14 +98,15 @@ public class RestConnectPackageMojo extends AbstractMojo {
         }
 
         //execute rest-connect
-        final File restConnectWorkDir = new File(buildDirectory, REST_CONNECT_WORKDIR);
-        final File restConnectOutputDir = new File(restConnectWorkDir, "target");
+        final File restConnectOutputDir = new File(buildDirectory, REST_CONNECT_WORKDIR);
+        String connectorArtifactId = "mule-plugin-" + project.getArtifactId();
         try {
             RestConnect.getInstance()
                     .createConnectorFromSpec(apiMainFile, SpecFormat.getFromString(calculateRestConnectFormat()), Parser.AMF, ConnectorType.SmartConnector)
                     .withGroupId(project.getGroupId())
-                    .withArtifactId(project.getArtifactId())
+                    .withArtifactId(connectorArtifactId)
                     .withVersion(project.getVersion())
+                    .withPackageConnector(false)
                     .withprojectDescription(getDescription(project))
                     .withOutputDir(restConnectOutputDir.toPath())
                     .run();
@@ -115,15 +116,21 @@ public class RestConnectPackageMojo extends AbstractMojo {
             throw new MojoExecutionException(messageError, e);
         }
 
-        //attach the generated mule-plugin from rest-connect
-        final File mulePlugin = searchMulePlugin(restConnectOutputDir);
-        if (mulePlugin != null && mulePlugin.exists()) {
-            getLog().info("Connector successfully generated");
-            helper.attachArtifact(project, "jar", "mule-plugin", mulePlugin);
+        //verify if rest-connect did do something in the output directory, at least the pom.xml
+        if (new File(restConnectOutputDir, "pom.xml").exists()) {
+            getLog().info(String.format("Connector successfully generated, use this dependency for a Mule 4 Application:\n" +
+                            "         <dependency>\n" +
+                            "            <groupId>%s</groupId>\n" +
+                            "            <artifactId>%s</artifactId>\n" +
+                            "            <version>%s</version>\n" +
+                            "            <classifier>mule-plugin</classifier>\n" +
+                            "        </dependency>",
+                    project.getGroupId(),
+                    connectorArtifactId,
+                    project.getVersion()));
         } else {
-            throw new MojoExecutionException(String.format("Couldn't find any generated connector to attach under [%s] (didn't find [%s])",
-                    restConnectOutputDir.getAbsolutePath(),
-                    mulePlugin.getAbsolutePath()));
+            throw new MojoExecutionException(String.format("Couldn't find any generated connector to attach under [%s]",
+                    restConnectOutputDir.getAbsolutePath()));
         }
     }
 
@@ -159,29 +166,5 @@ public class RestConnectPackageMojo extends AbstractMojo {
                     extension, String.join(",", EXTENSIONS_SPEC_FORMAT.keySet())));
         }
         return EXTENSIONS_SPEC_FORMAT.get(extension);
-    }
-
-    private File searchMulePlugin(File file) {
-        if (file.isDirectory()) {
-            File[] arr = file.listFiles();
-            for (File f : arr) {
-                File found = searchMulePlugin(f);
-                if (found != null)
-                    return found;
-            }
-        } else {
-            if (file.getName().endsWith("mule-plugin.jar")) {
-                return file;
-            }
-        }
-        return null;
-    }
-
-    public String getType() {
-        return "zip";
-    }
-
-    public String getClassifier() {
-        return classifier;
     }
 }

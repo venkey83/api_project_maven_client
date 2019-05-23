@@ -68,7 +68,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
             } catch (IOException e) {
                 throw new RuntimeException(String.format("error creating temporal `%s` empty file", TEMPORAL_EXCHANGE_XML), e);
             }
-        }else {
+        } else {
             // behave like proper maven in case there is no pom from manager
             pomFile = modelLocator.locatePom(projectDirectory);
         }
@@ -190,8 +190,43 @@ public class ExchangeModelProcessor implements ModelProcessor {
         build.setDirectory("${project.basedir}/.exchange_modules_tmp/target");
         build.setSourceDirectory("${project.basedir}");
         build.addPlugin(createPackagerPlugin(model));
+        build.addPlugin(createConnectorInvokerPlugin("install"));
+        build.addPlugin(createConnectorInvokerPlugin("deploy"));
         result.setBuild(build);
         return result;
+    }
+
+    private Plugin createConnectorInvokerPlugin(String phase) {
+        Plugin result = new Plugin();
+        result.setGroupId("org.apache.maven.plugins");
+        result.setArtifactId("maven-invoker-plugin");
+        result.setVersion("3.2.0");
+        final Xpp3Dom configuration = new Xpp3Dom("configuration");
+
+        addSimpleNodeTo("goals", phase, configuration);
+        addSimpleNodeTo("pom", "${project.basedir}/.exchange_modules_tmp/target/rest_connect_workdir/pom.xml", configuration);
+
+        // make the build a little bit faster by skipping docs and extension model generation
+        final Xpp3Dom propertiesNode = new Xpp3Dom("properties");
+        addSimpleNodeTo("skipDocumentation", "true", propertiesNode);
+        addSimpleNodeTo("mule.maven.extension.model.disable", "true", propertiesNode);
+        configuration.addChild(propertiesNode);
+
+        result.setConfiguration(configuration);
+
+        PluginExecution installConnector = new PluginExecution();
+        installConnector.setId("rest-connect-" + phase);
+        installConnector.setPhase(phase);
+        installConnector.addGoal("run");
+        result.addExecution(installConnector);
+
+        return result;
+    }
+
+    private void addSimpleNodeTo(String nodeName, String valueNode, Xpp3Dom configuration) {
+        final Xpp3Dom goalsNode = new Xpp3Dom(nodeName);
+        goalsNode.setValue(valueNode);
+        configuration.addChild(goalsNode);
     }
 
     private String dasherize(String name) {
@@ -204,12 +239,8 @@ public class ExchangeModelProcessor implements ModelProcessor {
         result.setArtifactId("exchange_api_packager");
         result.setVersion(PACKAGER_VERSION);
         final Xpp3Dom configuration = new Xpp3Dom("configuration");
-        final Xpp3Dom classifierNode = new Xpp3Dom("classifier");
-        classifierNode.setValue(model.getClassifier());
-        configuration.addChild(classifierNode);
-        final Xpp3Dom mainFileNode = new Xpp3Dom("mainFile");
-        mainFileNode.setValue(model.getMain());
-        configuration.addChild(mainFileNode);
+        addSimpleNodeTo("classifier", model.getClassifier(), configuration);
+        addSimpleNodeTo("mainFile", model.getMain(), configuration);
         result.setConfiguration(configuration);
 
         PluginExecution generateSources = new PluginExecution();
