@@ -17,6 +17,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
+import org.mule.maven.exchange.utils.ApiProjectConstants;
 
 import java.io.File;
 import java.io.IOException;

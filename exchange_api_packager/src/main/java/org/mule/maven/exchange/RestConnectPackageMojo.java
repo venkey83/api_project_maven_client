@@ -14,6 +14,7 @@ import org.mule.connectivity.restconnect.api.ConnectorType;
 import org.mule.connectivity.restconnect.api.Parser;
 import org.mule.connectivity.restconnect.api.RestConnect;
 import org.mule.connectivity.restconnect.api.SpecFormat;
+import org.mule.maven.exchange.utils.ApiProjectConstants;
 
 import java.io.File;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ public class RestConnectPackageMojo extends AbstractMojo {
                 }
             });
     private static final List<String> SUPPORTED_TYPES = Arrays.asList("raml", "oas");
-    private static final String REST_CONNECT_WORKDIR = "rest_connect_workdir";
+
 
     /**
      * Injected by Maven so that forked process can be
@@ -66,14 +67,16 @@ public class RestConnectPackageMojo extends AbstractMojo {
     /**
      * property to skip the complete connector generation
      */
-    @Parameter(property = "exchange.maven.disable.restConnect", defaultValue = "false")
-    private boolean disableRestConnect;
+    @Parameter(property = ApiProjectConstants.MAVEN_SKIP_REST_CONNECT, defaultValue = "false")
+    private boolean skipRestConnect;
 
     @Override
     public void execute() throws MojoExecutionException {
-        if (disableRestConnect) {
+        if (skipRestConnect) {
             getLog().info("Disabling connector generation..");
             return;
+        }else {
+            getLog().info(String.format("To disable connector generation parameterize '-D%s=true'", ApiProjectConstants.MAVEN_SKIP_REST_CONNECT));
         }
 
         if (!SUPPORTED_TYPES.contains(classifier)) {
@@ -98,7 +101,7 @@ public class RestConnectPackageMojo extends AbstractMojo {
         }
 
         //execute rest-connect
-        final File restConnectOutputDir = new File(buildDirectory, REST_CONNECT_WORKDIR);
+        final File restConnectOutputDir = new File(buildDirectory, ApiProjectConstants.REST_CONNECT_OUTPUTDIR);
         String connectorArtifactId = "mule-plugin-" + project.getArtifactId();
         try {
             RestConnect.getInstance()

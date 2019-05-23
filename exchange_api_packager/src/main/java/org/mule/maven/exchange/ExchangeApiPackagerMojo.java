@@ -14,7 +14,7 @@ import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.mule.maven.exchange.ApiProjectConstants.getFullApiDirectory;
+import static org.mule.maven.exchange.utils.ApiProjectConstants.getFullApiDirectory;
 
 @Mojo(name = "package-api", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 @Execute(goal = "package-api")

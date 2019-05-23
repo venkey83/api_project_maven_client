@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.mule.maven.exchange.ApiProjectConstants.*;
+import static org.mule.maven.exchange.utils.ApiProjectConstants.*;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
 @Mojo(name = "generate-full-api", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
@@ -47,7 +47,7 @@ public class FullApiGeneratorMojo extends AbstractMojo {
                 ),
                 goal("copy-dependencies"),
                 configuration(
-                        element(name("outputDirectory"), "${project.build.directory}/" + EXCHANGE_MODULES_REPOSITORY),
+                        element(name("outputDirectory"), "${project.build.directory}/" + MAVEN_SKIP_REST_CONNECT),
                         element(name("useRepositoryLayout"), "true")
                 ),
                 executionEnvironment(
@@ -61,7 +61,7 @@ public class FullApiGeneratorMojo extends AbstractMojo {
         final File fullApiDirectory = getFullApiDirectory(buildDirectory);
         final File sourceDirectory = new File(project.getBuild().getSourceDirectory());
         try {
-            unzipDependenciesAndCopyTo(new File(buildDirectory, EXCHANGE_MODULES_REPOSITORY), new File(fullApiDirectory, EXCHANGE_MODULES));
+            unzipDependenciesAndCopyTo(new File(buildDirectory, MAVEN_SKIP_REST_CONNECT), new File(fullApiDirectory, EXCHANGE_MODULES));
             FileUtils.copyDirectory(sourceDirectory, fullApiDirectory, new ApiSourceFileFilter(sourceDirectory, buildDirectory), true);
         } catch (IOException e) {
             throw new MojoExecutionException("Exception while trying to copy sources for `exchange-generate-full-api`", e);

@@ -3,7 +3,7 @@ package org.mule.maven.exchange;
 import java.io.File;
 import java.io.FileFilter;
 
-import static org.mule.maven.exchange.ApiProjectConstants.*;
+import static org.mule.maven.exchange.utils.ApiProjectConstants.*;
 
 public class ApiSourceFileFilter implements FileFilter {
 

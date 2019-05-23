@@ -81,6 +81,7 @@
                 <configuration>
                     <goals>install</goals>
                     <pom>${project.basedir}/.exchange_modules_tmp/target/rest_connect_workdir/pom.xml</pom>
+                    <skipInvocation>false</skipInvocation>
                     <properties>
                         <skipDocumentation>true</skipDocumentation>
                         <mule.maven.extension.model.disable>true</mule.maven.extension.model.disable>
@@ -102,6 +103,7 @@
                 <configuration>
                     <goals>deploy</goals>
                     <pom>${project.basedir}/.exchange_modules_tmp/target/rest_connect_workdir/pom.xml</pom>
+                    <skipInvocation>false</skipInvocation>
                     <properties>
                         <skipDocumentation>true</skipDocumentation>
                         <mule.maven.extension.model.disable>true</mule.maven.extension.model.disable>

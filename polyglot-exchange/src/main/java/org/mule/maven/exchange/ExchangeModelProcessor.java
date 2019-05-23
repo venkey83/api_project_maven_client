@@ -21,6 +21,7 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.mule.maven.exchange.model.ExchangeDependency;
 import org.mule.maven.exchange.model.ExchangeModel;
 import org.mule.maven.exchange.model.ExchangeModelSerializer;
+import org.mule.maven.exchange.utils.ApiProjectConstants;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -187,11 +188,12 @@ public class ExchangeModelProcessor implements ModelProcessor {
         final List<Dependency> dependencies = model.getDependencies().stream().map(this::toMavenDependency).collect(Collectors.toList());
         result.setDependencies(dependencies);
         final Build build = new Build();
-        build.setDirectory("${project.basedir}/.exchange_modules_tmp/target");
+        build.setDirectory(String.format("${project.basedir}/%s/target", ApiProjectConstants.EXCHANGE_MODULES_TMP));
         build.setSourceDirectory("${project.basedir}");
         build.addPlugin(createPackagerPlugin(model));
         build.addPlugin(createConnectorInvokerPlugin("install"));
         build.addPlugin(createConnectorInvokerPlugin("deploy"));
+
         result.setBuild(build);
         return result;
     }
@@ -204,9 +206,13 @@ public class ExchangeModelProcessor implements ModelProcessor {
         final Xpp3Dom configuration = new Xpp3Dom("configuration");
 
         addSimpleNodeTo("goals", phase, configuration);
-        addSimpleNodeTo("pom", "${project.basedir}/.exchange_modules_tmp/target/rest_connect_workdir/pom.xml", configuration);
+        addSimpleNodeTo("pom", String.format("${project.basedir}/%s/target/%s/pom.xml",
+                ApiProjectConstants.EXCHANGE_MODULES_TMP,
+                ApiProjectConstants.REST_CONNECT_OUTPUTDIR), configuration);
+        boolean skipInvoker = Boolean.getBoolean(ApiProjectConstants.MAVEN_SKIP_REST_CONNECT);
+        addSimpleNodeTo("skipInvocation", Boolean.toString(skipInvoker), configuration);
 
-        // make the build a little bit faster by skipping docs and extension model generation
+        // make the connector build a little bit faster by skipping docs and extension model generation
         final Xpp3Dom propertiesNode = new Xpp3Dom("properties");
         addSimpleNodeTo("skipDocumentation", "true", propertiesNode);
         addSimpleNodeTo("mule.maven.extension.model.disable", "true", propertiesNode);
