@@ -43,6 +43,8 @@ import static java.util.Collections.singletonList;
 @Component(role = ModelProcessor.class)
 public class ExchangeModelProcessor implements ModelProcessor {
 
+    public static final String ORG_ID_KEY = "orgId";
+
     private static Logger LOGGER = Logger.getLogger(ExchangeModelProcessor.class.getName());
 
     private static final String EXCHANGE_JSON = "exchange.json";
@@ -164,7 +166,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
                 } catch (IOException e) {
 
                 }
-                groupId = properties.getProperty("orgId");
+                groupId = properties.getProperty(ORG_ID_KEY);
             }
         }
 

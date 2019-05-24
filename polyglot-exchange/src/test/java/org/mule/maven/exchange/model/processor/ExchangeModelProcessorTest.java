@@ -1,5 +1,6 @@
 package org.mule.maven.exchange.model.processor;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.building.FileModelSource;
 import org.apache.maven.model.building.ModelProcessor;
@@ -35,27 +36,33 @@ public class ExchangeModelProcessorTest {
 
     @Test
     public void generateModelCorrectly() throws IOException {
-        System.setProperty("groupId", "org.mule.test");
-        final ExchangeModelProcessor exchangeModelProcessor = new ExchangeModelProcessor();
-        final HashMap<String, Object> options = new HashMap<>();
-        final File exchangeFile = getExchangeFile(testCase);
-        final FileModelSource fileModelSource = new FileModelSource(exchangeModelProcessor.locatePom(testCase));
-        options.put(ModelProcessor.SOURCE, fileModelSource);
-        final FileInputStream inputStream = new FileInputStream(exchangeFile);
-        final Model read = exchangeModelProcessor.read(inputStream, options);
-        final String result = exchangeModelProcessor.toXmlString(read);
-        final List<String> xmlLines = Files.readAllLines(getPomFile(testCase).toPath(), Charset.forName("UTF-8"));
-        final String content = xmlLines.stream().reduce((l, r) -> l + "\n" + r).orElse("");
-        final Diff myDiff = DiffBuilder.compare(Input.fromString(result)).withTest(Input.fromString(content))
-                .checkForSimilar()
-                .ignoreWhitespace()
-                .build();
+        try {
+            if (!testCase.getName().startsWith("groupId")) {
+                System.setProperty("groupId", "org.mule.test");
+            }
+            final ExchangeModelProcessor exchangeModelProcessor = new ExchangeModelProcessor();
+            final HashMap<String, Object> options = new HashMap<>();
+            final File exchangeFile = getExchangeFile(testCase);
+            final FileModelSource fileModelSource = new FileModelSource(exchangeModelProcessor.locatePom(testCase));
+            options.put(ModelProcessor.SOURCE, fileModelSource);
+            final FileInputStream inputStream = new FileInputStream(exchangeFile);
+            final Model read = exchangeModelProcessor.read(inputStream, options);
+            final String result = exchangeModelProcessor.toXmlString(read);
+            final List<String> xmlLines = Files.readAllLines(getPomFile(testCase).toPath(), Charset.forName("UTF-8"));
+            final String content = xmlLines.stream().reduce((l, r) -> l + "\n" + r).orElse("");
+            final Diff myDiff = DiffBuilder.compare(Input.fromString(result)).withTest(Input.fromString(content))
+                    .checkForSimilar()
+                    .ignoreWhitespace()
+                    .build();
 
-        if (myDiff.hasDifferences()) {
-            System.out.println(result);
+            if (myDiff.hasDifferences()) {
+                System.out.println(result);
+            }
+
+            assertFalse("XML similar " + myDiff.toString(), myDiff.hasDifferences());
+        } finally {
+            System.clearProperty("groupId");
         }
-
-        assertFalse("XML similar " + myDiff.toString(), myDiff.hasDifferences());
     }
 
     @Parameterized.Parameters(name = "{0}")
@@ -72,7 +79,9 @@ public class ExchangeModelProcessorTest {
                 if (files != null) {
                     for (File file : files) {
                         if (file.isDirectory() && isTestDirectory(file)) {
-                            args.add(new Object[]{file.getName(), file});
+                            final File workingDir = new File(FileUtils.getTempDirectory(), file.getName());
+                            FileUtils.copyDirectory(file, workingDir);
+                            args.add(new Object[]{workingDir.getName(), workingDir});
                         }
                     }
                 }
