@@ -23,13 +23,7 @@ import org.mule.maven.exchange.model.ExchangeModel;
 import org.mule.maven.exchange.model.ExchangeModelSerializer;
 import org.mule.maven.exchange.utils.ApiProjectConstants;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringWriter;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +112,19 @@ public class ExchangeModelProcessor implements ModelProcessor {
             //It's a normal maven project with a pom.xml file
             return modelReader.read(reader, options);
         }
+    }
+
+    /**
+     * Helper method used by studio by reflection do not change the signature.
+     * @param exchangeJson
+     * @return
+     * @throws IOException
+     */
+    public static String toPomXml(File exchangeJson) throws IOException {
+        final ExchangeModelProcessor exchangeModelProcessor = new ExchangeModelProcessor();
+        final FileInputStream exchangeJsonInputStream = new FileInputStream(exchangeJson);
+        final Model mavenModel = exchangeModelProcessor.getModel(exchangeJson.getAbsolutePath(), exchangeJsonInputStream);
+        return exchangeModelProcessor.toXmlString(mavenModel);
     }
 
     private Model getModel(String location, InputStream inputStream) throws IOException {
