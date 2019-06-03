@@ -3,6 +3,7 @@ package org.mule.maven.exchange.model;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -147,4 +148,29 @@ public class ExchangeDependency {
         return this;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExchangeDependency that = (ExchangeDependency) o;
+        return Objects.equals(groupId, that.groupId) &&
+                Objects.equals(assetId, that.assetId) &&
+                Objects.equals(version, that.version) &&
+                Objects.equals(additionalProperties, that.additionalProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(groupId, assetId, version, additionalProperties);
+    }
+
+    @Override
+    public String toString() {
+        return "ExchangeDependency{" +
+                "groupId='" + groupId + '\'' +
+                ", assetId='" + assetId + '\'' +
+                ", version='" + version + '\'' +
+                ", additionalProperties=" + additionalProperties +
+                '}';
+    }
 }

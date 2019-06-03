@@ -1,10 +1,7 @@
 
 package org.mule.maven.exchange.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -74,14 +71,7 @@ public class ExchangeModel {
      */
     @JsonProperty("groupId")
     private String groupId = "";
-    /**
-     * The Backwardscompatible Schema
-     * <p>
-     * <p>
-     * (Required)
-     */
-    @JsonProperty("backwardsCompatible")
-    private boolean backwardsCompatible = false;
+
     /**
      * The Assetid Schema
      * <p>
@@ -260,32 +250,6 @@ public class ExchangeModel {
         return this;
     }
 
-    /**
-     * The Backwardscompatible Schema
-     * <p>
-     * <p>
-     * (Required)
-     */
-    @JsonProperty("backwardsCompatible")
-    public boolean isBackwardsCompatible() {
-        return backwardsCompatible;
-    }
-
-    /**
-     * The Backwardscompatible Schema
-     * <p>
-     * <p>
-     * (Required)
-     */
-    @JsonProperty("backwardsCompatible")
-    public void setBackwardsCompatible(boolean backwardsCompatible) {
-        this.backwardsCompatible = backwardsCompatible;
-    }
-
-    public ExchangeModel withBackwardsCompatible(boolean backwardsCompatible) {
-        this.backwardsCompatible = backwardsCompatible;
-        return this;
-    }
 
     /**
      * The Assetid Schema
@@ -437,4 +401,43 @@ public class ExchangeModel {
         return this;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExchangeModel that = (ExchangeModel) o;
+        return Objects.equals(main, that.main) &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(classifier, that.classifier) &&
+                Objects.equals(tags, that.tags) &&
+                Objects.equals(groupId, that.groupId) &&
+                Objects.equals(assetId, that.assetId) &&
+                Objects.equals(version, that.version) &&
+                Objects.equals(apiVersion, that.apiVersion) &&
+                Objects.equals(dependencies, that.dependencies) &&
+                Objects.equals(metadata, that.metadata) &&
+                Objects.equals(additionalProperties, that.additionalProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(main, name, classifier, tags, groupId, assetId, version, apiVersion, dependencies, metadata, additionalProperties);
+    }
+
+    @Override
+    public String toString() {
+        return "ExchangeModel{" +
+                "main='" + main + '\'' +
+                ", name='" + name + '\'' +
+                ", classifier='" + classifier + '\'' +
+                ", tags=" + tags +
+                ", groupId='" + groupId + '\'' +
+                ", assetId='" + assetId + '\'' +
+                ", version='" + version + '\'' +
+                ", apiVersion='" + apiVersion + '\'' +
+                ", dependencies=" + dependencies +
+                ", metadata=" + metadata +
+                ", additionalProperties=" + additionalProperties +
+                '}';
+    }
 }

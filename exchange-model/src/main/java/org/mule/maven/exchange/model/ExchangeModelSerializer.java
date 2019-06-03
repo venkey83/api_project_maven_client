@@ -1,12 +1,17 @@
 package org.mule.maven.exchange.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.*;
 
 public class ExchangeModelSerializer {
 
     private ObjectMapper objectMapper = new ObjectMapper();
+
+    public ExchangeModelSerializer() {
+        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+    }
 
     public ExchangeModel read(File exchangeFile) throws IOException {
         return read(new FileInputStream(exchangeFile));
@@ -31,6 +36,10 @@ public class ExchangeModelSerializer {
 
 
     public void write(ExchangeModel model, Writer output) throws IOException {
+        objectMapper.writeValue(output, model);
+    }
+
+    public void write(ExchangeModel model, OutputStream output) throws IOException {
         objectMapper.writeValue(output, model);
     }
 

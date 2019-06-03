@@ -3,6 +3,7 @@ package org.mule.maven.exchange.model;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -147,4 +148,29 @@ public class ExchangeMetadata {
         return this;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExchangeMetadata that = (ExchangeMetadata) o;
+        return Objects.equals(projectId, that.projectId) &&
+                Objects.equals(branchId, that.branchId) &&
+                Objects.equals(commitId, that.commitId) &&
+                Objects.equals(additionalProperties, that.additionalProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(projectId, branchId, commitId, additionalProperties);
+    }
+
+    @Override
+    public String toString() {
+        return "ExchangeMetadata{" +
+                "projectId='" + projectId + '\'' +
+                ", branchId='" + branchId + '\'' +
+                ", commitId='" + commitId + '\'' +
+                ", additionalProperties=" + additionalProperties +
+                '}';
+    }
 }
