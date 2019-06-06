@@ -38,6 +38,7 @@ import static java.util.Collections.singletonList;
 public class ExchangeModelProcessor implements ModelProcessor {
 
     public static final String ORG_ID_KEY = "orgId";
+    public static final String RAML_FRAGMENT = "raml-fragment";
 
     private static Logger LOGGER = Logger.getLogger(ExchangeModelProcessor.class.getName());
 
@@ -116,6 +117,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
 
     /**
      * Helper method used by studio by reflection do not change the signature.
+     *
      * @param exchangeJson
      * @return
      * @throws IOException
@@ -200,9 +202,10 @@ public class ExchangeModelProcessor implements ModelProcessor {
         build.setDirectory(String.format("${project.basedir}/%s/target", ApiProjectConstants.EXCHANGE_MODULES_TMP));
         build.setSourceDirectory("${project.basedir}");
         build.addPlugin(createPackagerPlugin(model));
-        build.addPlugin(createConnectorInvokerPlugin("install"));
-        build.addPlugin(createConnectorInvokerPlugin("deploy"));
-
+        if (!model.getClassifier().equals(RAML_FRAGMENT)) {
+            build.addPlugin(createConnectorInvokerPlugin("install"));
+            build.addPlugin(createConnectorInvokerPlugin("deploy"));
+        }
         result.setBuild(build);
         return result;
     }
@@ -285,7 +288,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
         result.setArtifactId(dep.getAssetId());
         result.setGroupId(dep.getGroupId());
         result.setVersion(dep.getVersion());
-        result.setClassifier("raml-fragment");
+        result.setClassifier(RAML_FRAGMENT);
         result.setType("zip");
         return result;
     }
