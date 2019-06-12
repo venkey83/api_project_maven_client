@@ -63,6 +63,9 @@ public class ValidateApiMojo extends AbstractMojo {
                 final BaseUnit result;
                 final ProfileName profileName;
                 final File ramlFile = new File(calculateFatDirectory(buildDirectory), this.mainFile);
+                if (!ramlFile.exists()) {
+                    throw new MojoFailureException("The specified 'main' property '" + this.mainFile + "' can not be found. Please review your exchange.json");
+                }
                 final String mainFileURL = ramlFile.toURI().toString();
 
                 if (classifier.equals("raml")) {

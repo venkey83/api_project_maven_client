@@ -55,6 +55,17 @@ public class ExchangeModelProcessor implements ModelProcessor {
     @Requirement
     private ModelLocator modelLocator;
 
+    public ExchangeModelProcessor() {
+    }
+
+    public void setModelReader(ModelReader modelReader) {
+        this.modelReader = modelReader;
+    }
+
+    public void setModelLocator(ModelLocator modelLocator) {
+        this.modelLocator = modelLocator;
+    }
+
     @Override
     public File locatePom(File projectDirectory) {
         File pomFile = new File(projectDirectory, EXCHANGE_JSON);
