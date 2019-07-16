@@ -8,6 +8,7 @@ import amf.client.environment.DefaultEnvironment;
 import amf.client.environment.Environment;
 import amf.client.model.document.BaseUnit;
 import amf.client.parse.Oas20Parser;
+import amf.client.parse.Oas20YamlParser;
 import amf.client.parse.Raml08Parser;
 import amf.client.parse.RamlParser;
 import amf.client.validate.ValidationReport;
@@ -71,7 +72,7 @@ public class ValidateApiMojo extends AbstractMojo {
                 if (classifier.equals("raml")) {
                     final List<String> lines = Files.readAllLines(ramlFile.toPath(), Charset.forName("UTF-8"));
                     final String firstLine = lines.stream().filter(l -> !StringUtils.isBlank(l)).findFirst().orElse("");
-                    if (firstLine.equalsIgnoreCase("#%RAML 0.8")) {
+                    if (firstLine.toUpperCase().trim().startsWith("#%RAML 0.8")) {
                         result = new Raml08Parser(env).parseFileAsync(mainFileURL).get();
                         profileName = ProfileNames.RAML08();
                     } else {
@@ -79,8 +80,13 @@ public class ValidateApiMojo extends AbstractMojo {
                         profileName = ProfileNames.RAML();
                     }
                 } else {
-                    result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
-                    profileName = ProfileNames.OAS();
+                    if (mainFileURL.toLowerCase().endsWith(".json")) {
+                        result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
+                        profileName = ProfileNames.OAS20();
+                    } else {
+                        result = new Oas20YamlParser(env).parseFileAsync(mainFileURL).get();
+                        profileName = ProfileNames.OAS20();
+                    }
                 }
 
                 /* Run RAML default validations on parsed unit (expects no errors). */
