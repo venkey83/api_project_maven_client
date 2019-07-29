@@ -43,4 +43,19 @@ public class ExchangeModelSerializer {
         objectMapper.writeValue(output, model);
     }
 
+    /**
+     * Hack due to apikit's code to read the main file from the exchange.json file.
+     * Until it's fixed, or just for backwards compatibility, leave it here.
+     * See APIKIT-1956
+     *
+     * @param shouldIndent boolean to enable/disable the feature on the mapper side.
+     */
+    public void indent(boolean shouldIndent){
+        if (shouldIndent) {
+            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        } else {
+            objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
+        }
+    }
+
 }

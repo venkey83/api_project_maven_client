@@ -6,11 +6,22 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.*;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Execute;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
+import org.mule.maven.exchange.model.ExchangeModel;
+import org.mule.maven.exchange.model.ExchangeModelSerializer;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -20,6 +31,8 @@ import static org.mule.maven.exchange.utils.ApiProjectConstants.getFullApiDirect
 @Execute(goal = "package-api")
 public class ExchangeApiPackagerMojo extends AbstractMojo {
 
+
+    private static final String EXCHANGE_JSON = "exchange.json";
 
     /**
      * Injected by Maven so that forked process can be
@@ -95,6 +108,8 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
                 if (file.isDirectory()) {
                     addZipEntries(file, fileFilter, zip, name);
                 } else {
+                    // hack due to apikits issues while reading exchange.json file.
+                    file = tamperFileIfExchangeJson(file);
                     try (FileInputStream in = new FileInputStream(file)) {
                         final byte[] buf = new byte[1024];
                         zip.putNextEntry(new ZipEntry(name));
@@ -107,6 +122,38 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
                 }
             }
         }
+    }
+
+    /**
+     * Hack due to apikit's code to read the main file from the exchange.json file.
+     * Until it's fixed, or just for backwards compatibility, leave it here.
+     * See APIKIT-1956
+     *
+     * @param file file to check weather it's exchange.json or not.
+     * @return the same input {@code file} if it wasn't the exchange.json file. Otherwise, it reads the full content and
+     * removes all the spaces by using the serializer. In case anything fails, it falls back to the original file.
+     */
+    private File tamperFileIfExchangeJson(File file) {
+        if (file.getName().equals(EXCHANGE_JSON)) {
+            try {
+                final ExchangeModelSerializer objectMapper = new ExchangeModelSerializer();
+                objectMapper.indent(false);
+                final ExchangeModel model = objectMapper.read(file);
+                final File temporal_exchange = File.createTempFile("temporal_exchange", ".json");
+                objectMapper.write(model, temporal_exchange);
+                return temporal_exchange;
+            } catch (IOException e) {
+                //fail silently, returning the original file
+                if (getLog().isDebugEnabled()){
+                    getLog().debug(String.format("There has been an issue reading the [%s] file, message: [%s]. Full stack below.",
+                            EXCHANGE_JSON,
+                            e.getMessage()));
+                    e.printStackTrace();
+                }
+            }
+            return file;
+        }
+        return file;
     }
 
     protected String getFileName() {
