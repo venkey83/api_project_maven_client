@@ -106,6 +106,7 @@ public class RestConnectPackageMojo extends AbstractMojo {
         try {
             RestConnect.getInstance()
                     .createConnectorFromSpec(apiMainFile, SpecFormat.getFromString(calculateRestConnectFormat()), Parser.AMF, ConnectorType.SmartConnector)
+                    .withApiName(project.getArtifactId())
                     .withGroupId(project.getGroupId())
                     .withArtifactId(connectorArtifactId)
                     .withVersion(project.getVersion())
