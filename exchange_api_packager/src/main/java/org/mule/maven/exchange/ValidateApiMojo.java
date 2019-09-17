@@ -44,7 +44,7 @@ public class ValidateApiMojo extends AbstractMojo {
     private String mainFile;
 
     /**
-     * reference to the directory that's self contained, if not provided it will be guessed based on {@link ApiProjectConstants#getFullApiDirectory(java.io.File)}
+     * reference to the directory that's self contained, if not provided it will be guessed based on {@link ApiProjectConstants#getFatApiDirectory(java.io.File)}
      */
     @Parameter
     private String fatApiDirectory;
@@ -111,7 +111,7 @@ public class ValidateApiMojo extends AbstractMojo {
         if (fatApiDirectory != null) {
             result = new File(fatApiDirectory);
         } else {
-            result = ApiProjectConstants.getFullApiDirectory(buildDirectory);
+            result = ApiProjectConstants.getFatApiDirectory(buildDirectory);
             getLog().debug(String.format("Parameter 'fatApiDirectory' was null, guessing the fat API to [%s]", result.getAbsolutePath()));
         }
         return result;

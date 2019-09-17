@@ -58,7 +58,7 @@ public class FullApiGeneratorMojo extends AbstractMojo {
         );
 
         final File buildDirectory = new File(project.getBuild().getDirectory());
-        final File fullApiDirectory = getFullApiDirectory(buildDirectory);
+        final File fullApiDirectory = getFatApiDirectory(buildDirectory);
         final File sourceDirectory = new File(project.getBuild().getSourceDirectory());
         try {
             unzipDependenciesAndCopyTo(new File(buildDirectory, MAVEN_SKIP_REST_CONNECT), new File(fullApiDirectory, EXCHANGE_MODULES));

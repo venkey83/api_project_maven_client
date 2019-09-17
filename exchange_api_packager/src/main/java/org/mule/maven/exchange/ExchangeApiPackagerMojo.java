@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.mule.maven.exchange.utils.ApiProjectConstants.getFullApiDirectory;
+import static org.mule.maven.exchange.utils.ApiProjectConstants.getFatApiDirectory;
 
 @Mojo(name = "package-api", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 @Execute(goal = "package-api")
@@ -64,21 +64,26 @@ public class ExchangeApiPackagerMojo extends AbstractMojo {
         helper.attachArtifact(project, getType(), getClassifier(), apiZip);
 
         //create full zip
-        final String fullFileName = getFullFileName(project, getClassifier(), getType());
-        final File fullApiZip = new File(buildDirectory, fullFileName);
-        createZip(getFullApiDirectory(buildDirectory), TrueFileFilter.INSTANCE, fullApiZip);
-        helper.attachArtifact(project, getType(), getClassifier() + "-full", fullApiZip);
+        final String fatFileName = getFatFileName(project, getClassifier(), getType());
+        final File fatApiZip = new File(buildDirectory, fatFileName);
+        createZip(getFatApiDirectory(buildDirectory), TrueFileFilter.INSTANCE, fatApiZip);
+        helper.attachArtifact(project, getType(), createFatClassifier(getClassifier()), fatApiZip);
     }
 
     /**
      * Provides the name of the ZIP file that has the self contained API (with all of its dependencies)
-     * @param project working project
+     *
+     * @param project    working project
      * @param classifier artifact's classifier
-     * @param type artifact's type
+     * @param type       artifact's type
      * @return the name of the fat file for the ZIP file, such as "american-flights-api-1.0.3-raml-full.zip"
      */
-    private String getFullFileName(MavenProject project, final String classifier, final String type) {
-        return project.getBuild().getFinalName() + "-" + "fat-" + classifier + "." + type;
+    private String getFatFileName(MavenProject project, final String classifier, final String type) {
+        return project.getBuild().getFinalName() + "-" + createFatClassifier(classifier) + "." + type;
+    }
+
+    private static String createFatClassifier(String classifier) {
+        return "fat-" + classifier;
     }
 
     private void createZip(File sourceDir, FileFilter fileFilter, File zipFile) throws MojoExecutionException {
