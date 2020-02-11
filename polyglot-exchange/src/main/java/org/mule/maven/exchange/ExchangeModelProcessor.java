@@ -307,10 +307,7 @@ public class ExchangeModelProcessor implements ModelProcessor {
     }
 
     private Repository createExchangeRepository() {
-        String url = System.getProperty(MAVEN_FACADE_SYSTEM_PROPERTY);
-        if(url == null){
-            url = "https://maven.anypoint.mulesoft.com/api/v2/maven";
-        }
+        String url = System.getProperty(MAVEN_FACADE_SYSTEM_PROPERTY, "https://maven.anypoint.mulesoft.com/api/v2/maven");
         Repository repository = new Repository();
         repository.setId("anypoint-exchange-v2");
         repository.setName("Anypoint Exchange");
