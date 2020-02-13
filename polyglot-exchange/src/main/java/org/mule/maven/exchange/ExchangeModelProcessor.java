@@ -47,6 +47,8 @@ public class ExchangeModelProcessor implements ModelProcessor {
 
     public static final String PACKAGER_VERSION = "1.0-SNAPSHOT";
 
+    public static final String MAVEN_FACADE_SYSTEM_PROPERTY = "-Dexchange.maven.repository.url";
+
     private ExchangeModelSerializer objectMapper = new ExchangeModelSerializer();
 
     @Requirement
@@ -304,17 +306,12 @@ public class ExchangeModelProcessor implements ModelProcessor {
         return result;
     }
 
-    // <repository>
-//     <id>anypoint-exchange-v2</id>
-//     <name>Anypoint Exchange</name>
-//     <url>https://maven.anypoint.mulesoft.com/api/v2/maven</url>
-//    <layout>default</layout>
-// </repository>
     private Repository createExchangeRepository() {
+        String url = System.getProperty(MAVEN_FACADE_SYSTEM_PROPERTY, "https://maven.anypoint.mulesoft.com/api/v2/maven");
         Repository repository = new Repository();
         repository.setId("anypoint-exchange-v2");
         repository.setName("Anypoint Exchange");
-        repository.setUrl("https://maven.anypoint.mulesoft.com/api/v2/maven");
+        repository.setUrl(url);
         repository.setLayout("default");
         return repository;
     }
