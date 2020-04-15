@@ -1,7 +1,9 @@
 package org.mule.maven.exchange;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -13,6 +15,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -60,8 +67,11 @@ public class FullApiGeneratorMojo extends AbstractMojo {
         final File buildDirectory = new File(project.getBuild().getDirectory());
         final File fullApiDirectory = getFatApiDirectory(buildDirectory);
         final File sourceDirectory = new File(project.getBuild().getSourceDirectory());
+        final String targetRootPath = fullApiDirectory.getPath() + File.separator + EXCHANGE_MODULES;
+        final List<Dependency> projectDependencies = getDependenciesWithPotencialBadFormedPath();
+
         try {
-            unzipDependenciesAndCopyTo(new File(buildDirectory, MAVEN_SKIP_REST_CONNECT), new File(fullApiDirectory, EXCHANGE_MODULES));
+            unzipDependenciesAndCopyTo(new File(buildDirectory, MAVEN_SKIP_REST_CONNECT), new File(fullApiDirectory, EXCHANGE_MODULES), targetRootPath, projectDependencies);
             FileUtils.copyDirectory(sourceDirectory, fullApiDirectory, new ApiSourceFileFilter(sourceDirectory, buildDirectory), true);
         } catch (IOException e) {
             throw new MojoExecutionException("Exception while trying to copy sources for `exchange-generate-full-api`", e);
@@ -69,17 +79,25 @@ public class FullApiGeneratorMojo extends AbstractMojo {
 
     }
 
-    private void unzipDependenciesAndCopyTo(File sourceFile, File targetFile) throws MojoExecutionException {
+    private void unzipDependenciesAndCopyTo(File sourceFile, File targetFile, String targetRootPath, List<Dependency> projectDependencies) throws MojoExecutionException {
         try {
+
             if (sourceFile.isDirectory()) {
                 File[] listFiles = sourceFile.listFiles();
                 if (listFiles != null) {
                     for (File childFile : listFiles) {
-                        unzipDependenciesAndCopyTo(childFile, new File(targetFile, childFile.getName()));
+                        unzipDependenciesAndCopyTo(childFile, new File(targetFile, childFile.getName()), targetRootPath, projectDependencies);
                     }
                 }
             } else if (sourceFile.isFile() && sourceFile.getName().endsWith(".zip")) {
+
+                Optional<String> fixedPath = getFixedPath(projectDependencies, targetFile, targetRootPath);
                 File targetDirectory = targetFile.getParentFile();
+
+               if(fixedPath.isPresent()){
+                   targetDirectory = new File(fixedPath.get());
+               }
+
                 targetDirectory.mkdirs();
                 byte[] buffer = new byte[1024];
                 try (ZipInputStream zis = new ZipInputStream(new FileInputStream(sourceFile))) {
@@ -87,10 +105,14 @@ public class FullApiGeneratorMojo extends AbstractMojo {
                     ZipEntry zipEntry = zis.getNextEntry();
                     while (zipEntry != null) {
                         File newFile = new File(targetDirectory, zipEntry.getName());
-                        try (FileOutputStream fos = new FileOutputStream(newFile)) {
-                            int len;
-                            while ((len = zis.read(buffer)) > 0) {
-                                fos.write(buffer, 0, len);
+                        if(zipEntry.isDirectory()){
+                            newFile.mkdir();
+                        }else{
+                            try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                                int len;
+                                while ((len = zis.read(buffer)) > 0) {
+                                    fos.write(buffer, 0, len);
+                                }
                             }
                         }
                         zipEntry = zis.getNextEntry();
@@ -101,5 +123,25 @@ public class FullApiGeneratorMojo extends AbstractMojo {
         } catch (IOException e) {
             throw new MojoExecutionException("Unable to unzip " + sourceFile.getAbsolutePath(), e);
         }
+    }
+
+    private Optional<String> getFixedPath(List<Dependency> projectDependencies, File targetFile, String targetRootPath){
+        for(Dependency p : projectDependencies) {
+            String groupIdPath = StringUtils.replace(p.getGroupId(), ".", File.separator);
+            String partGavPath = File.separator  + p.getArtifactId() + File.separator + p.getVersion();
+            String gavPath = groupIdPath + partGavPath;
+
+            if(StringUtils.endsWith(targetFile.getParentFile().getPath(), gavPath)){
+                return Optional.of(targetRootPath + File.separator + p.getGroupId() + partGavPath);
+            }
+        }
+        return Optional.empty();
+
+    }
+
+    private List<Dependency> getDependenciesWithPotencialBadFormedPath(){
+        Stream<Dependency> collect = project.getDependencies().stream().filter(d -> StringUtils.containsAny(((Dependency) d).getGroupId(), "."));
+        List<Dependency> depWithDotsInGroupId = collect.collect(Collectors.toList());
+        return depWithDotsInGroupId;
     }
 }
