@@ -7,10 +7,7 @@ import amf.client.AMF;
 import amf.client.environment.DefaultEnvironment;
 import amf.client.environment.Environment;
 import amf.client.model.document.BaseUnit;
-import amf.client.parse.Oas20Parser;
-import amf.client.parse.Oas20YamlParser;
-import amf.client.parse.Raml08Parser;
-import amf.client.parse.RamlParser;
+import amf.client.parse.*;
 import amf.client.remote.Content;
 import amf.client.resource.ClientResourceLoader;
 import amf.client.validate.ValidationReport;
@@ -64,18 +61,19 @@ public class ValidateApiMojo extends AbstractMojo {
                 Environment env = DefaultEnvironment.apply();
 
                 /* Parsing Raml 10 with specified file returning future. */
-                final BaseUnit result;
-                final ProfileName profileName;
+                BaseUnit result;
+                ProfileName profileName;
                 File parent = calculateFatDirectory(buildDirectory);
-                env = env.addClientLoader(new ExchangeModulesResourceLoader(parent.getAbsolutePath().replace(File.separator,"/")));
+                env = env.addClientLoader(new ExchangeModulesResourceLoader(parent.getAbsolutePath().replace(File.separator, "/")));
                 final File ramlFile = new File(parent, this.mainFile);
                 if (!ramlFile.exists()) {
                     throw new MojoFailureException("The specified 'main' property '" + this.mainFile + "' can not be found. Please review your exchange.json");
                 }
                 final String mainFileURL = ramlFile.toURI().toString();
+                final List<String> lines = Files.readAllLines(ramlFile.toPath(), Charset.forName("UTF-8"));
 
                 if (classifier.equals("raml") || classifier.equals("raml-fragment")) {
-                    final List<String> lines = Files.readAllLines(ramlFile.toPath(), Charset.forName("UTF-8"));
+
                     final String firstLine = lines.stream().filter(l -> !StringUtils.isBlank(l)).findFirst().orElse("");
                     if (firstLine.toUpperCase().trim().startsWith("#%RAML 0.8")) {
                         result = new Raml08Parser(env).parseFileAsync(mainFileURL).get();
@@ -86,11 +84,23 @@ public class ValidateApiMojo extends AbstractMojo {
                     }
                 } else {
                     if (mainFileURL.toLowerCase().endsWith(".json")) {
-                        result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
-                        profileName = ProfileNames.OAS20();
+                        boolean oas2 = lines.stream().anyMatch(l->StringUtils.equals(l.trim(),"\"swagger\": \"2.0\","));
+                        if(oas2){
+                            result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
+                            profileName = ProfileNames.OAS20();
+                        } else {
+                            result = new Oas30Parser(env).parseFileAsync(mainFileURL).get();
+                            profileName = ProfileNames.OAS30();
+                        }
                     } else {
-                        result = new Oas20YamlParser(env).parseFileAsync(mainFileURL).get();
-                        profileName = ProfileNames.OAS20();
+                        boolean oas2 = lines.stream().anyMatch(l->StringUtils.equals(l.trim(),"swagger: \"2.0\""));
+                        if(oas2){
+                            result = new Oas20YamlParser(env).parseFileAsync(mainFileURL).get();
+                            profileName = ProfileNames.OAS20();
+                        }else{
+                            result = new Oas30YamlParser(env).parseFileAsync(mainFileURL).get();
+                            profileName = ProfileNames.OAS30();
+                        }
                     }
                 }
 
