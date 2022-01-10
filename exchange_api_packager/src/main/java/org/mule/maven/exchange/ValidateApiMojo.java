@@ -1,16 +1,11 @@
 package org.mule.maven.exchange;
 
 
-import amf.ProfileName;
-import amf.ProfileNames;
-import amf.client.AMF;
-import amf.client.environment.DefaultEnvironment;
-import amf.client.environment.Environment;
-import amf.client.model.document.BaseUnit;
-import amf.client.parse.*;
-import amf.client.remote.Content;
-import amf.client.resource.ClientResourceLoader;
-import amf.client.validate.ValidationReport;
+import amf.apicontract.client.platform.*;
+import amf.core.client.platform.AMFParseResult;
+import amf.core.client.platform.model.document.BaseUnit;
+import amf.core.client.platform.validation.AMFValidationReport;
+import amf.core.internal.remote.Spec;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -25,8 +20,8 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Mojo(name = "validate-api", defaultPhase = LifecyclePhase.COMPILE, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
@@ -51,62 +46,31 @@ public class ValidateApiMojo extends AbstractMojo {
     @Parameter
     private String fatApiDirectory;
 
-
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         final File buildDirectory = new File(project.getBuild().getDirectory());
         if (classifier.equals("raml") || classifier.equals("raml-fragment") || classifier.equals("oas")) {
             try {
-                AMF.init().get();
-
-                Environment env = DefaultEnvironment.apply();
-
                 /* Parsing Raml 10 with specified file returning future. */
                 BaseUnit result;
-                ProfileName profileName;
                 File parent = calculateFatDirectory(buildDirectory);
-                env = env.addClientLoader(new ExchangeModulesResourceLoader(parent.getAbsolutePath().replace(File.separator, "/")));
                 final File ramlFile = new File(parent, this.mainFile);
                 if (!ramlFile.exists()) {
                     throw new MojoFailureException("The specified 'main' property '" + this.mainFile + "' can not be found. Please review your exchange.json");
                 }
                 final String mainFileURL = URLDecoder.decode(ramlFile.toURI().toString(), "UTF-8");
-                final List<String> lines = Files.readAllLines(ramlFile.toPath(), Charset.forName("UTF-8"));
+                final AMFBaseUnitClient client;
+                final AMFParseResult parseResult;
+                final AMFConfiguration amfConfiguration = WebAPIConfiguration.WebAPI();
 
-                if (classifier.equals("raml") || classifier.equals("raml-fragment")) {
-
-                    final String firstLine = lines.stream().filter(l -> !StringUtils.isBlank(l)).findFirst().orElse("");
-                    if (firstLine.toUpperCase().trim().startsWith("#%RAML 0.8")) {
-                        result = new Raml08Parser(env).parseFileAsync(mainFileURL).get();
-                        profileName = ProfileNames.RAML08();
-                    } else {
-                        result = new RamlParser(env).parseFileAsync(mainFileURL).get();
-                        profileName = ProfileNames.RAML();
-                    }
-                } else {
-                    if (mainFileURL.toLowerCase().endsWith(".json")) {
-                        boolean oas2 = lines.stream().anyMatch(l->StringUtils.equals(l.trim(),"\"swagger\": \"2.0\","));
-                        if(oas2){
-                            result = new Oas20Parser(env).parseFileAsync(mainFileURL).get();
-                            profileName = ProfileNames.OAS20();
-                        } else {
-                            result = new Oas30Parser(env).parseFileAsync(mainFileURL).get();
-                            profileName = ProfileNames.OAS30();
-                        }
-                    } else {
-                        boolean oas2 = lines.stream().anyMatch(l->StringUtils.equals(l.trim(),"swagger: \"2.0\""));
-                        if(oas2){
-                            result = new Oas20YamlParser(env).parseFileAsync(mainFileURL).get();
-                            profileName = ProfileNames.OAS20();
-                        }else{
-                            result = new Oas30YamlParser(env).parseFileAsync(mainFileURL).get();
-                            profileName = ProfileNames.OAS30();
-                        }
-                    }
-                }
+                amfConfiguration.withResourceLoader(new ExchangeModulesResourceLoader(parent.getAbsolutePath().replace(File.separator, "/")));
+                client = amfConfiguration.baseUnitClient();
+                parseResult = client.parse(mainFileURL).get();
+                result = parseResult.baseUnit();
 
                 /* Run RAML default validations on parsed unit (expects no errors). */
-                final ValidationReport report = AMF.validate(result, profileName, profileName.messageStyle()).get();
+                final AMFBaseUnitClient validatorClient = WebAPIConfiguration.fromSpec(result.sourceSpec().get()).baseUnitClient();
+                final AMFValidationReport report = validatorClient.validate(result).get();
                 if (!report.conforms()) {
                     getLog().error(report.toString());
                     throw new MojoFailureException("Build Fail");
