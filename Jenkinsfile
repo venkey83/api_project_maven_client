@@ -8,7 +8,7 @@ pipeline {
     }
     stage('Deploy Standalone') {
       steps {
-        sh 'mvn deploy -P standalone'
+        sh 'mvn clean package'
       }
     }
     stage('Deploy ARM') {
