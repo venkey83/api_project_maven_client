@@ -3,12 +3,12 @@ pipeline {
   stages {
     stage('Unit Test') {
       steps {
-        sh 'mvn clean test'
+        sh 'sudo mvn clean test'
       }
     }
     stage('Deploy Standalone') {
       steps {
-        sh 'mvn clean package'
+        sh 'sudo mvn clean package'
       }
     }
     stage('Deploy ARM') {
@@ -16,7 +16,7 @@ pipeline {
         ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
       }
       steps {
-        sh 'mvn deploy -P arm -Darm.target.name=local-4.4.0-ee -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+        sh 'sudo mvn deploy -P arm -Darm.target.name=local-4.4.0-ee -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
       }
     }
     stage('Deploy CloudHub') {
@@ -24,7 +24,7 @@ pipeline {
         ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
       }
       steps {
-        sh 'mvn deploy -P cloudhub -Dmule.version=4.4.0 -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+        sh 'sudo mvn deploy -P cloudhub -Dmule.version=4.4.0 -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
       }
     }
   }
