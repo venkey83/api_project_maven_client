@@ -74,11 +74,11 @@
 
    <environment>Sandbox</environment>
 
- <businessGroup>${project.businessGroup}</businessGroup>
+ <businessGroup>Logus Business Systems India Pvt .Ltd</businessGroup>
 
    <businessGroupId>${project.businessGroupId}</businessGroupId>
 
-    <applicationName>${project.name}</applicationName>
+    <applicationName>test1</applicationName>
 
   </armDeployment>
 
