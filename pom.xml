@@ -56,34 +56,6 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
-	  <configuration>
-
-	 <armDeployment>
-
-   <muleVersion>4.4.0</muleVersion>
-
-   <uri>https://anypoint.mulesoft.com</uri>
-
-   <target>${project.target}</target>
-
-   <targetType>${project.targetType}</targetType>
-
-   <username>${anypoint.username}</username>
-
-   <password>${anypoint.password}</password>
-
-   <environment>Sandbox</environment>
-
- <businessGroup>Logus Business Systems India Pvt .Ltd</businessGroup>
-
-   <businessGroupId>${project.businessGroupId}</businessGroupId>
-
-    <applicationName>test1</applicationName>
-
-  </armDeployment>
-
-</configuration>
-
     <distributionManagement>
         <repository>
             <id>mule-releases</id>
