@@ -95,32 +95,6 @@
                 </plugin>              
                
 		    
-		    	 <armDeployment>
-
-   <muleVersion>4.4.0</muleVersion>
-
-   <uri>https://anypoint.mulesoft.com</uri>
-
-   <target>${project.target}</target>
-
-   <targetType>${project.targetType}</targetType>
-
-   <username>${anypoint.username}</username>
-
-   <password>${anypoint.password}</password>
-
-   <environment>Sandbox</environment>
-
- <businessGroup>${project.businessGroup}</businessGroup>
-
-   <businessGroupId>${project.businessGroupId}</businessGroupId>
-
-    <applicationName>${project.name}</applicationName>
-
- 
-
-  </armDeployment>
-		    
                 <plugin>
                     <groupId>com.mycila</groupId>
                     <artifactId>license-maven-plugin</artifactId>
